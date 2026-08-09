@@ -32,18 +32,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Rocket
 import com.composables.ui.components.Text
 import com.composables.ui.theme.ComposablesTheme
 
-private val appIconSize = 88.dp
-private val appTileHeight = 120.dp
-private val pagePadding = 24.dp
-private val gridHorizontalPadding = 56.dp
-private val gridHorizontalSpacing = 96.dp
-private val gridVerticalSpacing = 56.dp
+private val compactWidthBreakpoint = 600.dp
+private val tabletAppIconSize = 88.dp
+private val tabletAppTileHeight = 120.dp
+private val tabletPagePadding = 24.dp
+private val tabletGridHorizontalPadding = 56.dp
+private val tabletGridHorizontalSpacing = 96.dp
+private val tabletGridVerticalSpacing = 56.dp
+private val phoneAppIconSize = 64.dp
+private val phoneAppTileHeight = 100.dp
+private val phonePagePadding = 16.dp
+private val phoneGridHorizontalPadding = 16.dp
+private val phoneGridHorizontalSpacing = 16.dp
+private val phoneGridVerticalSpacing = 32.dp
 private val launcherIconColor = Color(0xFF4C5BD5)
 
 @Composable
@@ -85,13 +93,23 @@ private fun LauncherGridPager(
       )
     }
     BoxWithConstraints(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+      val isCompact = maxWidth < compactWidthBreakpoint
+      val appIconSize = if (isCompact) phoneAppIconSize else tabletAppIconSize
+      val appTileHeight = if (isCompact) phoneAppTileHeight else tabletAppTileHeight
+      val pagePadding = if (isCompact) phonePagePadding else tabletPagePadding
+      val gridHorizontalPadding =
+          if (isCompact) phoneGridHorizontalPadding else tabletGridHorizontalPadding
+      val gridHorizontalSpacing =
+          if (isCompact) phoneGridHorizontalSpacing else tabletGridHorizontalSpacing
+      val gridVerticalSpacing =
+          if (isCompact) phoneGridVerticalSpacing else tabletGridVerticalSpacing
       val pageWidth = maxWidth - pagePadding * 2
       val pageHeight = maxHeight - pagePadding * 2
       val columns =
           ((pageWidth - gridHorizontalPadding * 2 + gridHorizontalSpacing) /
                   (appIconSize + gridHorizontalSpacing))
               .toInt()
-              .coerceIn(1, 6)
+              .coerceIn(1, if (isCompact) 4 else 6)
       val rows =
           ((pageHeight + gridVerticalSpacing) / (appTileHeight + gridVerticalSpacing))
               .toInt()
@@ -107,6 +125,10 @@ private fun LauncherGridPager(
         LauncherGrid(
             apps = pages[page],
             columns = columns,
+            appIconSize = appIconSize,
+            gridHorizontalPadding = gridHorizontalPadding,
+            gridHorizontalSpacing = gridHorizontalSpacing,
+            gridVerticalSpacing = gridVerticalSpacing,
             onAppClick = onAppClick,
             onAppLongClick = onAppLongClick,
         )
@@ -152,6 +174,10 @@ private fun PageIndicator(
 private fun LauncherGrid(
     apps: List<LauncherApp>,
     columns: Int,
+    appIconSize: Dp,
+    gridHorizontalPadding: Dp,
+    gridHorizontalSpacing: Dp,
+    gridVerticalSpacing: Dp,
     onAppClick: (LauncherApp) -> Unit,
     onAppLongClick: (LauncherApp) -> Unit,
 ) {
@@ -168,6 +194,7 @@ private fun LauncherGrid(
     ) { app ->
       LauncherAppTile(
           app = app,
+          appIconSize = appIconSize,
           modifier = Modifier.animateItem(),
           onClick = { onAppClick(app) },
           onLongClick = { onAppLongClick(app) },
@@ -179,6 +206,7 @@ private fun LauncherGrid(
 @Composable
 private fun LauncherAppTile(
     app: LauncherApp,
+    appIconSize: Dp,
     modifier: Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
