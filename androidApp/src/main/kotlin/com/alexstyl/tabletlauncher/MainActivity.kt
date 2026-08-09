@@ -1,14 +1,20 @@
 package com.alexstyl.tabletlauncher
 
 import android.app.role.RoleManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -30,9 +36,30 @@ class MainActivity : ComponentActivity() {
       val installedAppsProvider = rememberInstalledAppsProvider()
       var apps by remember<MutableState<List<LauncherApp>>> { mutableStateOf(emptyList()) }
       LaunchedEffect(installedAppsProvider) { apps = installedAppsProvider.installedApps() }
+      DisposableEffect(installedAppsProvider) {
+        val packageChangeReceiver =
+            object : BroadcastReceiver() {
+              override fun onReceive(context: Context, intent: Intent) {
+                apps = installedAppsProvider.installedApps()
+              }
+            }
+
+        val filter =
+            IntentFilter().apply {
+              addAction(Intent.ACTION_PACKAGE_ADDED)
+              addAction(Intent.ACTION_PACKAGE_REMOVED)
+              addAction(Intent.ACTION_PACKAGE_CHANGED)
+              addAction(Intent.ACTION_PACKAGE_REPLACED)
+              addDataScheme("package")
+            }
+        registerPackageChangeReceiver(packageChangeReceiver, filter)
+
+        onDispose { unregisterReceiver(packageChangeReceiver) }
+      }
       HomeScreen(
           apps = apps,
           onAppClick = ::launchApp,
+          onAppLongClick = ::openAppInfo,
       )
     }
   }
@@ -49,6 +76,26 @@ class MainActivity : ComponentActivity() {
       Intent(Intent.ACTION_MAIN)
           .addCategory(Intent.CATEGORY_LAUNCHER)
           .setComponent(ComponentName(app.packageName, app.activityName))
+
+  private fun openAppInfo(app: LauncherApp) {
+    startActivity(
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", app.packageName, null),
+        ),
+    )
+  }
+
+  private fun registerPackageChangeReceiver(
+      receiver: BroadcastReceiver,
+      filter: IntentFilter,
+  ) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+    } else {
+      registerReceiver(receiver, filter)
+    }
+  }
 
   override fun onResume() {
     super.onResume()

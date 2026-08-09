@@ -2,7 +2,7 @@ package com.alexstyl.tabletlauncher
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,10 +50,18 @@ private val launcherIconColor = Color(0xFF4C5BD5)
 fun HomeScreen(
     apps: List<LauncherApp>,
     onAppClick: (LauncherApp) -> Unit,
+    onAppLongClick: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
   ComposablesTheme {
-    MaterialTheme { LauncherGridPager(apps = apps, onAppClick = onAppClick, modifier = modifier) }
+    MaterialTheme {
+      LauncherGridPager(
+          apps = apps,
+          onAppClick = onAppClick,
+          onAppLongClick = onAppLongClick,
+          modifier = modifier,
+      )
+    }
   }
 }
 
@@ -61,6 +69,7 @@ fun HomeScreen(
 private fun LauncherGridPager(
     apps: List<LauncherApp>,
     onAppClick: (LauncherApp) -> Unit,
+    onAppLongClick: (LauncherApp) -> Unit,
     modifier: Modifier,
 ) {
   val wallpaperProvider = rememberWallpaperProvider()
@@ -99,6 +108,7 @@ private fun LauncherGridPager(
             apps = pages[page],
             columns = columns,
             onAppClick = onAppClick,
+            onAppLongClick = onAppLongClick,
         )
       }
 
@@ -143,6 +153,7 @@ private fun LauncherGrid(
     apps: List<LauncherApp>,
     columns: Int,
     onAppClick: (LauncherApp) -> Unit,
+    onAppLongClick: (LauncherApp) -> Unit,
 ) {
   LazyVerticalGrid(
       columns = GridCells.Fixed(columns),
@@ -157,7 +168,9 @@ private fun LauncherGrid(
     ) { app ->
       LauncherAppTile(
           app = app,
+          modifier = Modifier.animateItem(),
           onClick = { onAppClick(app) },
+          onLongClick = { onAppLongClick(app) },
       )
     }
   }
@@ -166,10 +179,20 @@ private fun LauncherGrid(
 @Composable
 private fun LauncherAppTile(
     app: LauncherApp,
+    modifier: Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
   Column(
-      modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .combinedClickable(
+                  interactionSource = null,
+                  indication = null,
+                  onClick = onClick,
+                  onLongClick = onLongClick,
+              ),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {

@@ -4,5 +4,5 @@ import androidx.compose.ui.window.singleWindowApplication
 
 fun main() =
     singleWindowApplication(title = "Tablet Launcher") {
-      HomeScreen(apps = emptyList(), onAppClick = {})
+      HomeScreen(apps = emptyList(), onAppClick = {}, onAppLongClick = {})
     }
