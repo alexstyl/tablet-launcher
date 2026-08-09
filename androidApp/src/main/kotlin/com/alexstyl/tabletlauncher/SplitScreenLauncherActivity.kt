@@ -1,9 +1,17 @@
 package com.alexstyl.tabletlauncher
 
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 class SplitScreenLauncherActivity : ComponentActivity() {
@@ -14,12 +22,7 @@ class SplitScreenLauncherActivity : ComponentActivity() {
 
     selectedApp = OnyxSplitScreenLauncher.selectedAppFrom(intent)
     enableEdgeToEdge()
-    setContent {
-      App(
-          backgroundColor = Color(0xFFF0F0F0),
-          showWallpaper = false,
-      )
-    }
+    setContent { SplitScreenLauncher(::replaceCurrentPane) }
   }
 
   override fun onPostResume() {
@@ -30,4 +33,28 @@ class SplitScreenLauncherActivity : ComponentActivity() {
       OnyxSplitScreenLauncher.startSplit(this, app)
     }
   }
+
+  private fun replaceCurrentPane(app: LauncherApp) {
+    startActivity(
+        Intent(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_LAUNCHER)
+            .setComponent(ComponentName(app.packageName, app.activityName)),
+    )
+  }
+}
+
+@Composable
+private fun SplitScreenLauncher(replaceCurrentPane: (LauncherApp) -> Unit) {
+  val installedAppsProvider = rememberInstalledAppsProvider()
+  var apps by remember { mutableStateOf(emptyList<LauncherApp>()) }
+
+  LaunchedEffect(installedAppsProvider) { apps = installedAppsProvider.installedApps() }
+
+  LauncherAppGrid(
+      apps = apps,
+      onAppClick = replaceCurrentPane,
+      backgroundColor = Color.Black,
+      contentColor = Color.White,
+      showWallpaper = false,
+  )
 }

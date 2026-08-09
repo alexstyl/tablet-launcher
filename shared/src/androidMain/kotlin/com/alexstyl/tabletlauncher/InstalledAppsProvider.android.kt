@@ -1,6 +1,5 @@
 package com.alexstyl.tabletlauncher
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -43,41 +42,11 @@ private class AndroidInstalledAppsProvider(
               activityName = activityInfo.name,
               name = resolveInfo.loadLabel(packageManager).toString(),
               icon = resolveInfo.loadIcon(packageManager).toImageBitmap(),
-              launchAdjacent = activityInfo.name != splitScreenLauncherActivityName,
           )
         }
-        .distinctBy { it.packageName }
+        .distinctBy { it.packageName to it.activityName }
         .sortedBy { it.name.lowercase() }
   }
-
-  override fun launch(app: LauncherApp) {
-    val intent = launchIntentFor(app)
-    if (app.activityName == splitScreenLauncherActivityName) {
-      intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-    }
-    context.startActivity(intent)
-  }
-
-  override fun launchAdjacent(app: LauncherApp) {
-    if (context.javaClass.name == splitScreenLauncherActivityName) {
-      val intent = launchIntentFor(app)
-      intent.removeFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      context.startActivity(intent)
-      return
-    }
-
-    if (OnyxSplitScreenLauncher.isSupported) {
-      OnyxSplitScreenLauncher.open(context, app)
-    } else {
-      context.startActivity(launchIntentFor(app).addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT))
-    }
-  }
-
-  private fun launchIntentFor(app: LauncherApp): Intent =
-      Intent(Intent.ACTION_MAIN)
-          .addCategory(Intent.CATEGORY_LAUNCHER)
-          .setComponent(ComponentName(app.packageName, app.activityName))
-          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 }
 
 internal fun Drawable.toImageBitmap(): ImageBitmap {

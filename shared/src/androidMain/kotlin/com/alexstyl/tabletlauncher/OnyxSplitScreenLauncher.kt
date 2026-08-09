@@ -19,13 +19,6 @@ object OnyxSplitScreenLauncher {
     )
   }
 
-  fun selectedAppFrom(intent: Intent): LauncherApp? {
-    val packageName = intent.getStringExtra(selectedAppPackageName) ?: return null
-    val activityName = intent.getStringExtra(selectedAppActivityName) ?: return null
-
-    return LauncherApp(packageName, activityName, name = "", icon = null)
-  }
-
   fun startSplit(activity: Activity, selectedApp: LauncherApp) {
     val selectedAppIntent =
         Intent(Intent.ACTION_MAIN)
@@ -40,6 +33,13 @@ object OnyxSplitScreenLauncher {
             .putExtra(secondaryTaskBundle, selectedAppIntent.toOnyxTaskBundle())
             .putExtra(splitScreenLayoutType, splitScreenLayoutLeftRight),
     )
+  }
+
+  fun selectedAppFrom(intent: Intent): LauncherApp? {
+    val packageName = intent.getStringExtra(selectedAppPackageName) ?: return null
+    val activityName = intent.getStringExtra(selectedAppActivityName) ?: return null
+
+    return LauncherApp(packageName, activityName, name = "", icon = null)
   }
 
   private fun splitLauncherIntent(context: Context): Intent =

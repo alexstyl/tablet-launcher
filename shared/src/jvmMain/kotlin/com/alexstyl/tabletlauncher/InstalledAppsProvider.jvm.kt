@@ -10,8 +10,4 @@ actual fun rememberInstalledAppsProvider(): InstalledAppsProvider = remember {
 
 private data object EmptyInstalledAppsProvider : InstalledAppsProvider {
   override fun installedApps(): List<LauncherApp> = emptyList()
-
-  override fun launch(app: LauncherApp) = Unit
-
-  override fun launchAdjacent(app: LauncherApp) = Unit
 }

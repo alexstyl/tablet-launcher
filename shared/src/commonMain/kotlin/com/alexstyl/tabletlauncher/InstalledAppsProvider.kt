@@ -8,15 +8,10 @@ data class LauncherApp(
     val activityName: String,
     val name: String,
     val icon: ImageBitmap?,
-    val launchAdjacent: Boolean = true,
 )
 
 interface InstalledAppsProvider {
   fun installedApps(): List<LauncherApp>
-
-  fun launch(app: LauncherApp)
-
-  fun launchAdjacent(app: LauncherApp)
 }
 
 @Composable expect fun rememberInstalledAppsProvider(): InstalledAppsProvider

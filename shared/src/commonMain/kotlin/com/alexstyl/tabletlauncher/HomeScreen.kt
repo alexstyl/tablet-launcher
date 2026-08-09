@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -17,25 +19,28 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.composables.icons.lucide.Columns2
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Rocket
 import com.composables.ui.components.Text
+import com.composables.ui.theme.ComposablesTheme
 
 private val appIconSize = 88.dp
 private val appTileHeight = 120.dp
@@ -46,17 +51,55 @@ private val launcherIconColor = Color(0xFF4C5BD5)
 
 @Composable
 fun HomeScreen(
+    apps: List<LauncherApp>,
+    onAppClick: (LauncherApp, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  ComposablesTheme { MaterialTheme { HomeScreenContent(apps, onAppClick, modifier) } }
+}
+
+@Composable
+private fun HomeScreenContent(
+    apps: List<LauncherApp>,
+    onAppClick: (LauncherApp, Boolean) -> Unit,
+    modifier: Modifier,
+) {
+  var splitScreenMode by rememberSaveable { mutableStateOf(false) }
+
+  Box(modifier.fillMaxSize()) {
+    LauncherAppGrid(
+        apps = apps,
+        onAppClick = { app -> onAppClick(app, splitScreenMode) },
+    )
+    FloatingActionButton(
+        onClick = { splitScreenMode = !splitScreenMode },
+        modifier =
+            Modifier.align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(end = 32.dp, bottom = 32.dp),
+        containerColor =
+            if (splitScreenMode) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor =
+            if (splitScreenMode) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurface,
+    ) {
+      Icon(Lucide.Columns2, contentDescription = "Launch apps in split screen")
+    }
+  }
+}
+
+@Composable
+fun LauncherAppGrid(
+    apps: List<LauncherApp>,
+    onAppClick: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color.White,
+    contentColor: Color = Color.Black,
     showWallpaper: Boolean = true,
 ) {
-  val installedAppsProvider = rememberInstalledAppsProvider()
   val wallpaperProvider = rememberWallpaperProvider()
-  var apps by remember { mutableStateOf(emptyList<LauncherApp>()) }
-  var wallpaper by remember { mutableStateOf<ImageBitmap?>(null) }
-
-  LaunchedEffect(installedAppsProvider) { apps = installedAppsProvider.installedApps() }
-  LaunchedEffect(wallpaperProvider) { wallpaper = wallpaperProvider.wallpaper() }
+  val wallpaper = remember(wallpaperProvider) { wallpaperProvider.wallpaper() }
 
   Box(modifier = modifier.fillMaxSize().background(backgroundColor)) {
     if (showWallpaper)
@@ -88,13 +131,8 @@ fun HomeScreen(
         LauncherGrid(
             apps = pages[page],
             columns = columns,
-            onAppClick = { app ->
-              if (app.launchAdjacent) {
-                installedAppsProvider.launchAdjacent(app)
-              } else {
-                installedAppsProvider.launch(app)
-              }
-            },
+            contentColor = contentColor,
+            onAppClick = onAppClick,
         )
       }
     }
@@ -105,6 +143,7 @@ fun HomeScreen(
 private fun LauncherGrid(
     apps: List<LauncherApp>,
     columns: Int,
+    contentColor: Color,
     onAppClick: (LauncherApp) -> Unit,
 ) {
   LazyVerticalGrid(
@@ -116,10 +155,11 @@ private fun LauncherGrid(
   ) {
     items(
         items = apps,
-        key = { app -> app.packageName },
+        key = { app -> app.packageName to app.activityName },
     ) { app ->
       LauncherAppTile(
           app = app,
+          contentColor = contentColor,
           onClick = { onAppClick(app) },
       )
     }
@@ -129,6 +169,7 @@ private fun LauncherGrid(
 @Composable
 private fun LauncherAppTile(
     app: LauncherApp,
+    contentColor: Color,
     onClick: () -> Unit,
 ) {
   Column(
@@ -160,7 +201,7 @@ private fun LauncherAppTile(
     }
     Text(
         text = app.name,
-        color = Color.Black,
+        color = contentColor,
         fontWeight = FontWeight.Medium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
