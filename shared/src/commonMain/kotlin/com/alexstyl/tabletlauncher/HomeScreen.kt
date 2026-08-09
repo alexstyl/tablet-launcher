@@ -8,26 +8,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +33,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.composables.icons.lucide.Columns2
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Rocket
 import com.composables.ui.components.Text
@@ -44,47 +40,20 @@ import com.composables.ui.theme.ComposablesTheme
 
 private val appIconSize = 88.dp
 private val appTileHeight = 120.dp
+private val pagePadding = 24.dp
 private val gridHorizontalPadding = 56.dp
-private val gridHorizontalSpacing = 32.dp
-private val gridVerticalSpacing = 28.dp
+private val gridHorizontalSpacing = 96.dp
+private val gridVerticalSpacing = 56.dp
 private val launcherIconColor = Color(0xFF4C5BD5)
 
 @Composable
 fun HomeScreen(
     apps: List<LauncherApp>,
-    onAppClick: (LauncherApp, Boolean) -> Unit,
+    onAppClick: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
   ComposablesTheme {
-    MaterialTheme {
-      var splitScreenMode by rememberSaveable { mutableStateOf(false) }
-
-      Box(modifier.fillMaxSize()) {
-        LauncherGridPager(
-            apps = apps,
-            onAppClick = { app ->
-              val launchInSplitScreen = splitScreenMode
-              splitScreenMode = false
-              onAppClick(app, launchInSplitScreen)
-            },
-        )
-        FloatingActionButton(
-            onClick = { splitScreenMode = !splitScreenMode },
-            modifier =
-                Modifier.align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(end = 32.dp, bottom = 32.dp),
-            containerColor =
-                if (splitScreenMode) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor =
-                if (splitScreenMode) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurface,
-        ) {
-          Icon(Lucide.Columns2, contentDescription = "Launch apps in split screen")
-        }
-      }
-    }
+    MaterialTheme { LauncherGridPager(apps = apps, onAppClick = onAppClick, modifier = modifier) }
   }
 }
 
@@ -92,11 +61,12 @@ fun HomeScreen(
 private fun LauncherGridPager(
     apps: List<LauncherApp>,
     onAppClick: (LauncherApp) -> Unit,
+    modifier: Modifier,
 ) {
   val wallpaperProvider = rememberWallpaperProvider()
   val wallpaper = remember(wallpaperProvider) { wallpaperProvider.wallpaper() }
 
-  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+  Box(modifier = modifier.fillMaxSize().background(Color.White)) {
     wallpaper?.let { image ->
       Image(
           bitmap = image,
@@ -105,14 +75,16 @@ private fun LauncherGridPager(
           contentScale = ContentScale.Crop,
       )
     }
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+      val pageWidth = maxWidth - pagePadding * 2
+      val pageHeight = maxHeight - pagePadding * 2
       val columns =
-          ((maxWidth - gridHorizontalPadding * 2 + gridHorizontalSpacing) /
+          ((pageWidth - gridHorizontalPadding * 2 + gridHorizontalSpacing) /
                   (appIconSize + gridHorizontalSpacing))
               .toInt()
-              .coerceAtLeast(1)
+              .coerceIn(1, 6)
       val rows =
-          ((maxHeight + gridVerticalSpacing) / (appTileHeight + gridVerticalSpacing))
+          ((pageHeight + gridVerticalSpacing) / (appTileHeight + gridVerticalSpacing))
               .toInt()
               .coerceAtLeast(1)
       val pages = apps.chunked(columns * rows).ifEmpty { listOf(emptyList()) }
@@ -121,6 +93,7 @@ private fun LauncherGridPager(
       HorizontalPager(
           state = pagerState,
           modifier = Modifier.fillMaxSize(),
+          contentPadding = PaddingValues(pagePadding),
       ) { page ->
         LauncherGrid(
             apps = pages[page],
@@ -128,6 +101,39 @@ private fun LauncherGridPager(
             onAppClick = onAppClick,
         )
       }
+
+      if (pages.size > 1) {
+        PageIndicator(
+            pageCount = pages.size,
+            currentPage = pagerState.currentPage,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = pagePadding),
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun PageIndicator(
+    pageCount: Int,
+    currentPage: Int,
+    modifier: Modifier = Modifier,
+) {
+  Row(
+      modifier = modifier,
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    repeat(pageCount) { page ->
+      Box(
+          modifier =
+              Modifier.size(if (page == currentPage) 8.dp else 6.dp)
+                  .background(
+                      color =
+                          if (page == currentPage) Color.Black else Color.Black.copy(alpha = 0.35f),
+                      shape = CircleShape,
+                  ),
+      )
     }
   }
 }
@@ -143,7 +149,7 @@ private fun LauncherGrid(
       modifier = Modifier.fillMaxSize(),
       contentPadding = PaddingValues(horizontal = gridHorizontalPadding),
       horizontalArrangement = Arrangement.spacedBy(gridHorizontalSpacing),
-      verticalArrangement = Arrangement.spacedBy(gridVerticalSpacing, Alignment.CenterVertically),
+      verticalArrangement = Arrangement.spacedBy(gridVerticalSpacing),
   ) {
     items(
         items = apps,
