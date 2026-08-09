@@ -49,8 +49,12 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun launchAppInSplitScreen(app: LauncherApp) {
-    check(OnyxSplitScreenLauncher.isSupported) { "Split screen requires a BOOX device" }
-    OnyxSplitScreenLauncher.open(this, app)
+    startActivity(
+        launcherIntentFor(app)
+            .addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT,
+            ),
+    )
   }
 
   private fun launcherIntentFor(app: LauncherApp): Intent =

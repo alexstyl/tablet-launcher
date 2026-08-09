@@ -12,9 +12,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 
-private const val splitScreenLauncherActivityName =
-    "com.alexstyl.tabletlauncher.SplitScreenLauncherActivity"
-
 @Composable
 actual fun rememberInstalledAppsProvider(): InstalledAppsProvider {
   val context = LocalContext.current
@@ -30,11 +27,7 @@ private class AndroidInstalledAppsProvider(
 
     return packageManager
         .queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
-        .filter { resolveInfo ->
-          val activityInfo = resolveInfo.activityInfo
-          activityInfo.packageName != context.packageName ||
-              activityInfo.name == splitScreenLauncherActivityName
-        }
+        .filter { resolveInfo -> resolveInfo.activityInfo.packageName != context.packageName }
         .map { resolveInfo ->
           val activityInfo = resolveInfo.activityInfo
           LauncherApp(

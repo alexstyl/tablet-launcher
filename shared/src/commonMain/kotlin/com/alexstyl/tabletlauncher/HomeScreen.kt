@@ -55,62 +55,56 @@ fun HomeScreen(
     onAppClick: (LauncherApp, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  ComposablesTheme { MaterialTheme { HomeScreenContent(apps, onAppClick, modifier) } }
-}
+  ComposablesTheme {
+    MaterialTheme {
+      var splitScreenMode by rememberSaveable { mutableStateOf(false) }
 
-@Composable
-private fun HomeScreenContent(
-    apps: List<LauncherApp>,
-    onAppClick: (LauncherApp, Boolean) -> Unit,
-    modifier: Modifier,
-) {
-  var splitScreenMode by rememberSaveable { mutableStateOf(false) }
-
-  Box(modifier.fillMaxSize()) {
-    LauncherAppGrid(
-        apps = apps,
-        onAppClick = { app -> onAppClick(app, splitScreenMode) },
-    )
-    FloatingActionButton(
-        onClick = { splitScreenMode = !splitScreenMode },
-        modifier =
-            Modifier.align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 32.dp, bottom = 32.dp),
-        containerColor =
-            if (splitScreenMode) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor =
-            if (splitScreenMode) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurface,
-    ) {
-      Icon(Lucide.Columns2, contentDescription = "Launch apps in split screen")
+      Box(modifier.fillMaxSize()) {
+        LauncherGridPager(
+            apps = apps,
+            onAppClick = { app ->
+              val launchInSplitScreen = splitScreenMode
+              splitScreenMode = false
+              onAppClick(app, launchInSplitScreen)
+            },
+        )
+        FloatingActionButton(
+            onClick = { splitScreenMode = !splitScreenMode },
+            modifier =
+                Modifier.align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(end = 32.dp, bottom = 32.dp),
+            containerColor =
+                if (splitScreenMode) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor =
+                if (splitScreenMode) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurface,
+        ) {
+          Icon(Lucide.Columns2, contentDescription = "Launch apps in split screen")
+        }
+      }
     }
   }
 }
 
 @Composable
-fun LauncherAppGrid(
+private fun LauncherGridPager(
     apps: List<LauncherApp>,
     onAppClick: (LauncherApp) -> Unit,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.White,
-    contentColor: Color = Color.Black,
-    showWallpaper: Boolean = true,
 ) {
   val wallpaperProvider = rememberWallpaperProvider()
   val wallpaper = remember(wallpaperProvider) { wallpaperProvider.wallpaper() }
 
-  Box(modifier = modifier.fillMaxSize().background(backgroundColor)) {
-    if (showWallpaper)
-        wallpaper?.let { image ->
-          Image(
-              bitmap = image,
-              contentDescription = null,
-              modifier = Modifier.fillMaxSize(),
-              contentScale = ContentScale.Crop,
-          )
-        }
+  Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    wallpaper?.let { image ->
+      Image(
+          bitmap = image,
+          contentDescription = null,
+          modifier = Modifier.fillMaxSize(),
+          contentScale = ContentScale.Crop,
+      )
+    }
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
       val columns =
           ((maxWidth - gridHorizontalPadding * 2 + gridHorizontalSpacing) /
@@ -131,7 +125,6 @@ fun LauncherAppGrid(
         LauncherGrid(
             apps = pages[page],
             columns = columns,
-            contentColor = contentColor,
             onAppClick = onAppClick,
         )
       }
@@ -143,7 +136,6 @@ fun LauncherAppGrid(
 private fun LauncherGrid(
     apps: List<LauncherApp>,
     columns: Int,
-    contentColor: Color,
     onAppClick: (LauncherApp) -> Unit,
 ) {
   LazyVerticalGrid(
@@ -159,7 +151,6 @@ private fun LauncherGrid(
     ) { app ->
       LauncherAppTile(
           app = app,
-          contentColor = contentColor,
           onClick = { onAppClick(app) },
       )
     }
@@ -169,7 +160,6 @@ private fun LauncherGrid(
 @Composable
 private fun LauncherAppTile(
     app: LauncherApp,
-    contentColor: Color,
     onClick: () -> Unit,
 ) {
   Column(
@@ -201,7 +191,7 @@ private fun LauncherAppTile(
     }
     Text(
         text = app.name,
-        color = contentColor,
+        color = Color.Black,
         fontWeight = FontWeight.Medium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
