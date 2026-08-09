@@ -29,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,6 +85,7 @@ private fun LauncherGridPager(
 ) {
   val wallpaperProvider = rememberWallpaperProvider()
   val wallpaper = remember(wallpaperProvider) { wallpaperProvider.wallpaper() }
+  val labelColor = remember(wallpaper) { wallpaper.labelColor() }
 
   Box(modifier = modifier.fillMaxSize().background(Color.White)) {
     wallpaper?.let { image ->
@@ -129,6 +133,7 @@ private fun LauncherGridPager(
             gridHorizontalPadding = gridHorizontalPadding,
             gridHorizontalSpacing = gridHorizontalSpacing,
             gridVerticalSpacing = gridVerticalSpacing,
+            labelColor = labelColor,
             onAppClick = onAppClick,
             onAppLongClick = onAppLongClick,
         )
@@ -143,6 +148,29 @@ private fun LauncherGridPager(
       }
     }
   }
+}
+
+private fun ImageBitmap?.labelColor(): Color {
+  if (this == null) {
+    return Color.Black
+  }
+
+  val samplesPerAxis = 5
+  val averageLuminance =
+      (1..samplesPerAxis).sumOf { horizontalSample ->
+        (1..samplesPerAxis).sumOf { verticalSample ->
+          toPixelMap(
+                  startX = width * horizontalSample / (samplesPerAxis + 1),
+                  startY = height * verticalSample / (samplesPerAxis + 1),
+                  width = 1,
+                  height = 1,
+              )[0, 0]
+              .luminance()
+              .toDouble()
+        }
+      } / (samplesPerAxis * samplesPerAxis)
+
+  return if (averageLuminance > 0.55) Color.Black else Color.White
 }
 
 @Composable
@@ -178,6 +206,7 @@ private fun LauncherGrid(
     gridHorizontalPadding: Dp,
     gridHorizontalSpacing: Dp,
     gridVerticalSpacing: Dp,
+    labelColor: Color,
     onAppClick: (LauncherApp) -> Unit,
     onAppLongClick: (LauncherApp) -> Unit,
 ) {
@@ -195,6 +224,7 @@ private fun LauncherGrid(
       LauncherAppTile(
           app = app,
           appIconSize = appIconSize,
+          labelColor = labelColor,
           modifier = Modifier.animateItem(),
           onClick = { onAppClick(app) },
           onLongClick = { onAppLongClick(app) },
@@ -207,6 +237,7 @@ private fun LauncherGrid(
 private fun LauncherAppTile(
     app: LauncherApp,
     appIconSize: Dp,
+    labelColor: Color,
     modifier: Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -248,7 +279,7 @@ private fun LauncherAppTile(
     }
     Text(
         text = app.name,
-        color = Color.Black,
+        color = labelColor,
         fontWeight = FontWeight.Medium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
