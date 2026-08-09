@@ -46,6 +46,7 @@ private val compactWidthBreakpoint = 600.dp
 private val tabletAppIconSize = 88.dp
 private val tabletAppTileHeight = 120.dp
 private val tabletPagePadding = 24.dp
+private val tabletTopPagePadding = 48.dp
 private val tabletGridHorizontalPadding = 56.dp
 private val tabletGridHorizontalSpacing = 96.dp
 private val tabletGridVerticalSpacing = 56.dp
@@ -101,6 +102,7 @@ private fun LauncherGridPager(
       val appIconSize = if (isCompact) phoneAppIconSize else tabletAppIconSize
       val appTileHeight = if (isCompact) phoneAppTileHeight else tabletAppTileHeight
       val pagePadding = if (isCompact) phonePagePadding else tabletPagePadding
+      val topPagePadding = if (isCompact) phonePagePadding else tabletTopPagePadding
       val gridHorizontalPadding =
           if (isCompact) phoneGridHorizontalPadding else tabletGridHorizontalPadding
       val gridHorizontalSpacing =
@@ -108,7 +110,7 @@ private fun LauncherGridPager(
       val gridVerticalSpacing =
           if (isCompact) phoneGridVerticalSpacing else tabletGridVerticalSpacing
       val pageWidth = maxWidth - pagePadding * 2
-      val pageHeight = maxHeight - pagePadding * 2
+      val pageHeight = maxHeight - topPagePadding - pagePadding
       val columns =
           ((pageWidth - gridHorizontalPadding * 2 + gridHorizontalSpacing) /
                   (appIconSize + gridHorizontalSpacing))
@@ -124,7 +126,13 @@ private fun LauncherGridPager(
       HorizontalPager(
           state = pagerState,
           modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(pagePadding),
+          contentPadding =
+              PaddingValues(
+                  start = pagePadding,
+                  top = topPagePadding,
+                  end = pagePadding,
+                  bottom = pagePadding,
+              ),
       ) { page ->
         LauncherGrid(
             apps = pages[page],

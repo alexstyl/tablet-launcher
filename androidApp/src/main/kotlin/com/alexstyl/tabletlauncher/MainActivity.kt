@@ -21,6 +21,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : ComponentActivity() {
   private var hasRequestedHomeRole = false
@@ -32,6 +35,7 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
 
     enableEdgeToEdge()
+    hideSystemBars()
     setContent {
       val installedAppsProvider = rememberInstalledAppsProvider()
       var apps by remember<MutableState<List<LauncherApp>>> { mutableStateOf(emptyList()) }
@@ -109,6 +113,21 @@ class MainActivity : ComponentActivity() {
         !roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
       hasRequestedHomeRole = true
       requestHomeRole.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME))
+    }
+  }
+
+  override fun onWindowFocusChanged(hasFocus: Boolean) {
+    super.onWindowFocusChanged(hasFocus)
+
+    if (hasFocus) {
+      hideSystemBars()
+    }
+  }
+
+  private fun hideSystemBars() {
+    WindowCompat.getInsetsController(window, window.decorView).apply {
+      systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+      hide(WindowInsetsCompat.Type.systemBars())
     }
   }
 }
