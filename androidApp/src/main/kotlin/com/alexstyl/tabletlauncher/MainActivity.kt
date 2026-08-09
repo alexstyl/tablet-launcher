@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : ComponentActivity() {
+  private var hiddenPackageNames by mutableStateOf<Set<String>>(emptySet())
   private var hasRequestedHomeRole = false
 
   private val requestHomeRole =
@@ -36,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     enableEdgeToEdge()
     hideSystemBars()
+    hiddenPackageNames =
+        getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
+            .getStringSet(HIDDEN_PACKAGES_KEY, emptySet()) ?: emptySet()
     setContent {
       val installedAppsProvider = rememberInstalledAppsProvider()
       var apps by remember<MutableState<List<LauncherApp>>> { mutableStateOf(emptyList()) }
@@ -60,10 +64,15 @@ class MainActivity : ComponentActivity() {
 
         onDispose { unregisterReceiver(packageChangeReceiver) }
       }
+      val visibleApps = apps.filterNot { it.packageName in hiddenPackageNames }
+      val hiddenApps = apps.filter { it.packageName in hiddenPackageNames }
       HomeScreen(
-          apps = apps,
+          apps = visibleApps,
+          hiddenApps = hiddenApps,
           onAppClick = ::launchApp,
           onAppLongClick = ::openAppInfo,
+          onHideApp = ::hideApp,
+          onRestoreApp = ::restoreApp,
       )
     }
   }
@@ -88,6 +97,22 @@ class MainActivity : ComponentActivity() {
             Uri.fromParts("package", app.packageName, null),
         ),
     )
+  }
+
+  private fun hideApp(app: LauncherApp) {
+    updateHiddenPackages(hiddenPackageNames + app.packageName)
+  }
+
+  private fun restoreApp(app: LauncherApp) {
+    updateHiddenPackages(hiddenPackageNames - app.packageName)
+  }
+
+  private fun updateHiddenPackages(packages: Set<String>) {
+    hiddenPackageNames = packages
+    getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
+        .edit()
+        .putStringSet(HIDDEN_PACKAGES_KEY, packages)
+        .apply()
   }
 
   private fun registerPackageChangeReceiver(
@@ -129,5 +154,10 @@ class MainActivity : ComponentActivity() {
       systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
       hide(WindowInsetsCompat.Type.systemBars())
     }
+  }
+
+  private companion object {
+    const val PREFERENCES_NAME = "launcher"
+    const val HIDDEN_PACKAGES_KEY = "hidden_packages"
   }
 }
