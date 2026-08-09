@@ -5,11 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -18,7 +18,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,52 +33,70 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.composables.icons.lucide.Columns2
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Rocket
 import com.composables.ui.components.Text
 
-private const val appsPerPage = 24
+private val appIconSize = 88.dp
+private val appTileHeight = 120.dp
+private val gridHorizontalPadding = 56.dp
+private val gridHorizontalSpacing = 32.dp
+private val gridVerticalSpacing = 28.dp
 private val launcherIconColor = Color(0xFF4C5BD5)
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = Color.White,
+    showWallpaper: Boolean = true,
+) {
   val installedAppsProvider = rememberInstalledAppsProvider()
   val wallpaperProvider = rememberWallpaperProvider()
   var apps by remember { mutableStateOf(emptyList<LauncherApp>()) }
   var wallpaper by remember { mutableStateOf<ImageBitmap?>(null) }
-  val pages = apps.chunked(appsPerPage).ifEmpty { listOf(emptyList()) }
-  val pagerState = rememberPagerState(pageCount = { pages.size })
 
   LaunchedEffect(installedAppsProvider) { apps = installedAppsProvider.installedApps() }
   LaunchedEffect(wallpaperProvider) { wallpaper = wallpaperProvider.wallpaper() }
 
-  Box(modifier = modifier.fillMaxSize().background(Color.White)) {
-    wallpaper?.let { image ->
-      Image(
-          bitmap = image,
-          contentDescription = null,
+  Box(modifier = modifier.fillMaxSize().background(backgroundColor)) {
+    if (showWallpaper)
+        wallpaper?.let { image ->
+          Image(
+              bitmap = image,
+              contentDescription = null,
+              modifier = Modifier.fillMaxSize(),
+              contentScale = ContentScale.Crop,
+          )
+        }
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+      val columns =
+          ((maxWidth - gridHorizontalPadding * 2 + gridHorizontalSpacing) /
+                  (appIconSize + gridHorizontalSpacing))
+              .toInt()
+              .coerceAtLeast(1)
+      val rows =
+          ((maxHeight + gridVerticalSpacing) / (appTileHeight + gridVerticalSpacing))
+              .toInt()
+              .coerceAtLeast(1)
+      val pages = apps.chunked(columns * rows).ifEmpty { listOf(emptyList()) }
+      val pagerState = rememberPagerState(pageCount = { pages.size })
+
+      HorizontalPager(
+          state = pagerState,
           modifier = Modifier.fillMaxSize(),
-          contentScale = ContentScale.Crop,
-      )
-    }
-    HorizontalPager(
-        state = pagerState,
-        modifier = Modifier.fillMaxSize(),
-    ) { page ->
-      LauncherGrid(
-          apps = pages[page],
-          onAppClick = installedAppsProvider::launch,
-      )
-    }
-    LargeFloatingActionButton(
-        onClick = {},
-        modifier = Modifier.align(Alignment.BottomEnd).padding(32.dp),
-    ) {
-      Icon(
-          imageVector = Lucide.Columns2,
-          contentDescription = "Arrange side by side",
-      )
+      ) { page ->
+        LauncherGrid(
+            apps = pages[page],
+            columns = columns,
+            onAppClick = { app ->
+              if (app.launchAdjacent) {
+                installedAppsProvider.launchAdjacent(app)
+              } else {
+                installedAppsProvider.launch(app)
+              }
+            },
+        )
+      }
     }
   }
 }
@@ -87,14 +104,15 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun LauncherGrid(
     apps: List<LauncherApp>,
+    columns: Int,
     onAppClick: (LauncherApp) -> Unit,
 ) {
   LazyVerticalGrid(
-      columns = GridCells.Fixed(6),
+      columns = GridCells.Fixed(columns),
       modifier = Modifier.fillMaxSize(),
-      contentPadding = PaddingValues(horizontal = 56.dp, vertical = 48.dp),
-      horizontalArrangement = Arrangement.spacedBy(32.dp),
-      verticalArrangement = Arrangement.spacedBy(28.dp),
+      contentPadding = PaddingValues(horizontal = gridHorizontalPadding),
+      horizontalArrangement = Arrangement.spacedBy(gridHorizontalSpacing),
+      verticalArrangement = Arrangement.spacedBy(gridVerticalSpacing, Alignment.CenterVertically),
   ) {
     items(
         items = apps,
@@ -121,7 +139,9 @@ private fun LauncherAppTile(
     if (app.icon == null) {
       Box(
           modifier =
-              Modifier.size(88.dp).clip(RoundedCornerShape(20.dp)).background(launcherIconColor),
+              Modifier.size(appIconSize)
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(launcherIconColor),
           contentAlignment = Alignment.Center,
       ) {
         Icon(
@@ -135,7 +155,7 @@ private fun LauncherAppTile(
       Image(
           bitmap = app.icon,
           contentDescription = null,
-          modifier = Modifier.size(88.dp).clip(RoundedCornerShape(20.dp)),
+          modifier = Modifier.size(appIconSize).clip(RoundedCornerShape(20.dp)),
       )
     }
     Text(
