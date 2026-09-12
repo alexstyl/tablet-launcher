@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
-actual fun rememberInstalledAppsProvider(): InstalledAppsProvider {
+fun rememberInstalledAppsProvider(): InstalledAppsProvider {
   val context = LocalContext.current
   return remember(context) { AndroidInstalledAppsProvider(context) }
 }

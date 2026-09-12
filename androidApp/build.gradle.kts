@@ -2,6 +2,7 @@ import com.android.build.api.dsl.ApplicationExtension
 
 plugins {
   alias(libs.plugins.android.application)
+  alias(libs.plugins.jetbrains.compose)
   alias(libs.plugins.jetbrains.compose.compiler)
 }
 
@@ -26,6 +27,8 @@ extensions.configure<ApplicationExtension> {
 }
 
 dependencies {
-  implementation(projects.shared)
   implementation(libs.androidx.activity.compose)
+  implementation(compose.material3)
+  implementation(libs.composables.icons.lucide)
+  implementation(libs.composables.ui)
 }
