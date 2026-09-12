@@ -60,4 +60,5 @@ dependencies {
   implementation(compose.material3)
   implementation(libs.composables.icons.lucide)
   implementation(libs.composables.ui)
+  implementation(libs.compose.unstyled)
 }

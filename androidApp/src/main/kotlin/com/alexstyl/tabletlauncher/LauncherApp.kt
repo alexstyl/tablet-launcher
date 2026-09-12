@@ -7,6 +7,7 @@ data class LauncherApp(
     val activityName: String,
     val name: String,
     val icon: ImageBitmap?,
+    val canUninstall: Boolean,
 )
 
 data class LauncherAppKey(

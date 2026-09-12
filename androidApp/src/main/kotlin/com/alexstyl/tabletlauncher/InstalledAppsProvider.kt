@@ -2,6 +2,7 @@ package com.alexstyl.tabletlauncher
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -35,6 +36,8 @@ private class AndroidInstalledAppsProvider(
               activityName = activityInfo.name,
               name = resolveInfo.loadLabel(packageManager).toString(),
               icon = resolveInfo.loadIcon(packageManager).toImageBitmap(),
+              canUninstall =
+                  activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0,
           )
         }
         .distinctBy { it.packageName to it.activityName }

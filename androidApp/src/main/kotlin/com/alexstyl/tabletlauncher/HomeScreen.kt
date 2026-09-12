@@ -24,6 +24,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -51,9 +53,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.composables.icons.lucide.Eye
 import com.composables.icons.lucide.EyeOff
+import com.composables.icons.lucide.FolderPlus
+import com.composables.icons.lucide.Info
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Rocket
+import com.composables.icons.lucide.Trash2
 import com.composables.ui.components.Text
 import com.composables.ui.theme.ComposablesTheme
 
@@ -104,11 +110,11 @@ fun HomeScreen(
     onAppLongClick: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
     onRestoreApp: (LauncherApp) -> Unit,
+    onRemoveApp: (LauncherApp) -> Unit,
     onSaveFolder: (folderId: String?, name: String, apps: Set<LauncherApp>) -> Unit,
     onDeleteFolder: (folderId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  var appAction by remember { mutableStateOf<AppAction?>(null) }
   var showingHiddenApps by remember { mutableStateOf(false) }
   var folderDraft by remember { mutableStateOf<FolderDraft?>(null) }
   var openedFolder by remember { mutableStateOf<LauncherFolder?>(null) }
@@ -126,7 +132,11 @@ fun HomeScreen(
             folderApps = folderApps,
             hasHiddenApps = hiddenApps.isNotEmpty(),
             onAppClick = onAppClick,
-            onAppLongClick = { app -> appAction = AppAction(app, isHidden = false) },
+            onAppInfo = onAppLongClick,
+            onHideApp = onHideApp,
+            onRestoreApp = onRestoreApp,
+            onCreateFolder = { app -> folderDraft = FolderDraft(selectedApps = setOf(app)) },
+            onRemoveApp = onRemoveApp,
             onFolderClick = { folder -> openedFolder = folder },
             onHiddenAppsClick = { showingHiddenApps = true },
             modifier = Modifier.fillMaxSize(),
@@ -140,7 +150,9 @@ fun HomeScreen(
                 showingHiddenApps = false
                 onAppClick(app)
               },
-              onAppLongClick = { app -> appAction = AppAction(app, isHidden = true) },
+              onAppInfo = onAppLongClick,
+              onRestoreApp = onRestoreApp,
+              onRemoveApp = onRemoveApp,
           )
         }
 
@@ -153,7 +165,10 @@ fun HomeScreen(
                 openedFolder = null
                 onAppClick(app)
               },
-              onAppLongClick = { app -> appAction = AppAction(app, isHidden = false) },
+              onAppInfo = onAppLongClick,
+              onHideApp = onHideApp,
+              onCreateFolder = { app -> folderDraft = FolderDraft(selectedApps = setOf(app)) },
+              onRemoveApp = onRemoveApp,
               onEdit = {
                 openedFolder = null
                 folderDraft =
@@ -162,25 +177,6 @@ fun HomeScreen(
                         name = folder.name,
                         selectedApps = apps.filter { it.key in folder.appKeys }.toSet(),
                     )
-              },
-          )
-        }
-
-        appAction?.let { action ->
-          AppActionsDialog(
-              action = action,
-              onDismiss = { appAction = null },
-              onInfo = {
-                appAction = null
-                onAppLongClick(action.app)
-              },
-              onChangeHiddenState = {
-                appAction = null
-                if (action.isHidden) onRestoreApp(action.app) else onHideApp(action.app)
-              },
-              onCreateFolder = {
-                appAction = null
-                folderDraft = FolderDraft(selectedApps = setOf(action.app))
               },
           )
         }
@@ -216,11 +212,16 @@ private fun LauncherGridPager(
     folderApps: Map<String, List<LauncherApp>>,
     hasHiddenApps: Boolean,
     onAppClick: (LauncherApp) -> Unit,
-    onAppLongClick: (LauncherApp) -> Unit,
+    onAppInfo: (LauncherApp) -> Unit,
+    onHideApp: (LauncherApp) -> Unit,
+    onRestoreApp: (LauncherApp) -> Unit,
+    onCreateFolder: (LauncherApp) -> Unit,
+    onRemoveApp: (LauncherApp) -> Unit,
     onFolderClick: (LauncherFolder) -> Unit,
     onHiddenAppsClick: () -> Unit,
     modifier: Modifier,
     applySystemBarPadding: Boolean = true,
+    isShowingHiddenApps: Boolean = false,
 ) {
   Box(modifier = modifier.fillMaxSize().background(Color.White)) {
     val gridModifier =
@@ -250,9 +251,10 @@ private fun LauncherGridPager(
               .toInt()
               .coerceAtLeast(1)
       val gridItems =
-          folders.map { folder -> LauncherGridItem.Folder(folder) } +
-              apps.map { app -> LauncherGridItem.App(app) } +
-              if (hasHiddenApps) listOf(LauncherGridItem.HiddenApps) else emptyList()
+          (folders.map { folder -> LauncherGridItem.Folder(folder) } +
+                  apps.map { app -> LauncherGridItem.App(app) } +
+                  if (hasHiddenApps) listOf(LauncherGridItem.HiddenApps) else emptyList())
+              .sortedBy { it.name.lowercase() }
       val pages = gridItems.chunked(columns * rows).ifEmpty { listOf(emptyList()) }
       val pagerState = rememberPagerState(pageCount = { pages.size })
 
@@ -276,9 +278,14 @@ private fun LauncherGridPager(
             gridVerticalSpacing = gridVerticalSpacing,
             folderApps = folderApps,
             onAppClick = onAppClick,
-            onAppLongClick = onAppLongClick,
+            onAppInfo = onAppInfo,
+            onHideApp = onHideApp,
+            onRestoreApp = onRestoreApp,
+            onCreateFolder = onCreateFolder,
+            onRemoveApp = onRemoveApp,
             onFolderClick = onFolderClick,
             onHiddenAppsClick = onHiddenAppsClick,
+            isShowingHiddenApps = isShowingHiddenApps,
         )
       }
 
@@ -299,17 +306,20 @@ private data class FolderDraft(
     val selectedApps: Set<LauncherApp>,
 )
 
-private data class AppAction(
-    val app: LauncherApp,
-    val isHidden: Boolean,
-)
-
 private sealed interface LauncherGridItem {
-  data class App(val app: LauncherApp) : LauncherGridItem
+  val name: String
 
-  data class Folder(val folder: LauncherFolder) : LauncherGridItem
+  data class App(val app: LauncherApp) : LauncherGridItem {
+    override val name: String = app.name
+  }
 
-  data object HiddenApps : LauncherGridItem
+  data class Folder(val folder: LauncherFolder) : LauncherGridItem {
+    override val name: String = folder.name
+  }
+
+  data object HiddenApps : LauncherGridItem {
+    override val name: String = "Hidden"
+  }
 }
 
 @Composable
@@ -317,7 +327,9 @@ private fun HiddenAppsDialog(
     apps: List<LauncherApp>,
     onDismiss: () -> Unit,
     onAppClick: (LauncherApp) -> Unit,
-    onAppLongClick: (LauncherApp) -> Unit,
+    onAppInfo: (LauncherApp) -> Unit,
+    onRestoreApp: (LauncherApp) -> Unit,
+    onRemoveApp: (LauncherApp) -> Unit,
 ) {
   Box(
       modifier =
@@ -348,11 +360,16 @@ private fun HiddenAppsDialog(
             folderApps = emptyMap(),
             hasHiddenApps = false,
             onAppClick = onAppClick,
-            onAppLongClick = onAppLongClick,
+            onAppInfo = onAppInfo,
+            onHideApp = {},
+            onRestoreApp = onRestoreApp,
+            onCreateFolder = {},
+            onRemoveApp = onRemoveApp,
             onFolderClick = {},
             onHiddenAppsClick = {},
             modifier = Modifier.fillMaxSize().padding(top = 64.dp),
             applySystemBarPadding = false,
+            isShowingHiddenApps = true,
         )
         Text(
             text = "Hidden Apps",
@@ -370,7 +387,10 @@ private fun FolderAppsDialog(
     apps: List<LauncherApp>,
     onDismiss: () -> Unit,
     onAppClick: (LauncherApp) -> Unit,
-    onAppLongClick: (LauncherApp) -> Unit,
+    onAppInfo: (LauncherApp) -> Unit,
+    onHideApp: (LauncherApp) -> Unit,
+    onCreateFolder: (LauncherApp) -> Unit,
+    onRemoveApp: (LauncherApp) -> Unit,
     onEdit: () -> Unit,
 ) {
   Box(
@@ -394,7 +414,11 @@ private fun FolderAppsDialog(
             folderApps = emptyMap(),
             hasHiddenApps = false,
             onAppClick = onAppClick,
-            onAppLongClick = onAppLongClick,
+            onAppInfo = onAppInfo,
+            onHideApp = onHideApp,
+            onRestoreApp = {},
+            onCreateFolder = onCreateFolder,
+            onRemoveApp = onRemoveApp,
             onFolderClick = {},
             onHiddenAppsClick = {},
             modifier = Modifier.fillMaxSize().padding(top = 64.dp),
@@ -407,57 +431,6 @@ private fun FolderAppsDialog(
         ) {
           Text(text = folder.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
           TextButton(onClick = onEdit) { Text(text = "Edit") }
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun AppActionsDialog(
-    action: AppAction,
-    onDismiss: () -> Unit,
-    onInfo: () -> Unit,
-    onChangeHiddenState: () -> Unit,
-    onCreateFolder: () -> Unit,
-) {
-  Box(
-      modifier =
-          Modifier.fillMaxSize()
-              .background(Color.Black.copy(alpha = 0.16f))
-              .combinedClickable(
-                  interactionSource = null,
-                  indication = null,
-                  onClick = onDismiss,
-              ),
-      contentAlignment = Alignment.Center,
-  ) {
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        modifier =
-            Modifier.fillMaxWidth(0.8f)
-                .combinedClickable(
-                    interactionSource = null,
-                    indication = null,
-                    onClick = {},
-                ),
-    ) {
-      Column(modifier = Modifier.padding(24.dp)) {
-        Text(
-            text = action.app.name,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        ) {
-          TextButton(onClick = onInfo) { Text(text = "Info") }
-          if (!action.isHidden) {
-            TextButton(onClick = onCreateFolder) { Text(text = "Create folder") }
-          }
-          TextButton(onClick = onChangeHiddenState) {
-            Text(text = if (action.isHidden) "Put back" else "Hide")
-          }
         }
       }
     }
@@ -499,9 +472,14 @@ private fun LauncherGrid(
     gridVerticalSpacing: Dp,
     folderApps: Map<String, List<LauncherApp>>,
     onAppClick: (LauncherApp) -> Unit,
-    onAppLongClick: (LauncherApp) -> Unit,
+    onAppInfo: (LauncherApp) -> Unit,
+    onHideApp: (LauncherApp) -> Unit,
+    onRestoreApp: (LauncherApp) -> Unit,
+    onCreateFolder: (LauncherApp) -> Unit,
+    onRemoveApp: (LauncherApp) -> Unit,
     onFolderClick: (LauncherFolder) -> Unit,
     onHiddenAppsClick: () -> Unit,
+    isShowingHiddenApps: Boolean,
 ) {
   LazyVerticalGrid(
       columns = GridCells.Fixed(columns),
@@ -527,7 +505,22 @@ private fun LauncherGrid(
                 appIconSize = appIconSize,
                 modifier = Modifier,
                 onClick = { onAppClick(item.app) },
-                onLongClick = { onAppLongClick(item.app) },
+                onInfo = { onAppInfo(item.app) },
+                onChangeHiddenState = {
+                  if (isShowingHiddenApps) onRestoreApp(item.app) else onHideApp(item.app)
+                },
+                onCreateFolder =
+                    if (isShowingHiddenApps) null
+                    else {
+                      { onCreateFolder(item.app) }
+                    },
+                onRemoveApp =
+                    if (item.app.canUninstall) {
+                      { onRemoveApp(item.app) }
+                    } else {
+                      null
+                    },
+                isHidden = isShowingHiddenApps,
             )
         is LauncherGridItem.Folder ->
             FolderTile(
@@ -768,50 +761,118 @@ private fun LauncherAppTile(
     appIconSize: Dp,
     modifier: Modifier,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onInfo: () -> Unit,
+    onChangeHiddenState: () -> Unit,
+    onCreateFolder: (() -> Unit)?,
+    onRemoveApp: (() -> Unit)?,
+    isHidden: Boolean,
 ) {
-  Column(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .combinedClickable(
-                  interactionSource = null,
-                  indication = null,
-                  onClick = onClick,
-                  onLongClick = onLongClick,
-              ),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    if (app.icon == null) {
-      Box(
-          modifier =
-              Modifier.size(appIconSize)
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(launcherIconColor),
-          contentAlignment = Alignment.Center,
-      ) {
-        Icon(
-            imageVector = Lucide.Rocket,
+  var showMenu by remember { mutableStateOf(false) }
+  Box(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .combinedClickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = onClick,
+                    onLongClick = { showMenu = true },
+                ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      if (app.icon == null) {
+        Box(
+            modifier =
+                Modifier.size(appIconSize)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(launcherIconColor),
+            contentAlignment = Alignment.Center,
+        ) {
+          Icon(
+              imageVector = Lucide.Rocket,
+              contentDescription = null,
+              modifier = Modifier.size(44.dp),
+              tint = Color.White,
+          )
+        }
+      } else {
+        Image(
+            bitmap = app.icon,
             contentDescription = null,
-            modifier = Modifier.size(44.dp),
-            tint = Color.White,
+            modifier = Modifier.size(appIconSize).clip(RoundedCornerShape(20.dp)),
         )
       }
-    } else {
-      Image(
-          bitmap = app.icon,
-          contentDescription = null,
-          modifier = Modifier.size(appIconSize).clip(RoundedCornerShape(20.dp)),
+      Text(
+          text = app.name,
+          color = Color.Black,
+          fontWeight = FontWeight.Medium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
       )
     }
-    Text(
-        text = app.name,
-        color = Color.Black,
-        fontWeight = FontWeight.Medium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+      DropdownMenuItem(
+          text = { Text(text = "Info") },
+          leadingIcon = {
+            Icon(
+                imageVector = Lucide.Info,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp))
+          },
+          onClick = {
+            showMenu = false
+            onInfo()
+          },
+      )
+      onCreateFolder?.let { createFolder ->
+        DropdownMenuItem(
+            text = { Text(text = "Create folder") },
+            leadingIcon = {
+              Icon(
+                  imageVector = Lucide.FolderPlus,
+                  contentDescription = null,
+                  modifier = Modifier.size(20.dp),
+              )
+            },
+            onClick = {
+              showMenu = false
+              createFolder()
+            },
+        )
+      }
+      DropdownMenuItem(
+          text = { Text(text = if (isHidden) "Put back" else "Hide") },
+          leadingIcon = {
+            Icon(
+                imageVector = if (isHidden) Lucide.Eye else Lucide.EyeOff,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+          },
+          onClick = {
+            showMenu = false
+            onChangeHiddenState()
+          },
+      )
+      onRemoveApp?.let { removeApp ->
+        DropdownMenuItem(
+            text = { Text(text = "Remove app", color = Color.Red) },
+            leadingIcon = {
+              Icon(
+                  imageVector = Lucide.Trash2,
+                  contentDescription = null,
+                  modifier = Modifier.size(20.dp),
+                  tint = Color.Red,
+              )
+            },
+            onClick = {
+              showMenu = false
+              removeApp()
+            },
+        )
+      }
+    }
   }
 }
 

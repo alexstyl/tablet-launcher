@@ -17,8 +17,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,6 +26,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
   private var hiddenPackageNames by mutableStateOf<Set<String>>(emptySet())
@@ -46,13 +48,16 @@ class MainActivity : ComponentActivity() {
     folders = loadFolders()
     setContent {
       val installedAppsProvider = rememberInstalledAppsProvider()
-      var apps by remember<MutableState<List<LauncherApp>>> { mutableStateOf(emptyList()) }
-      LaunchedEffect(installedAppsProvider) { apps = installedAppsProvider.installedApps() }
+      var apps by remember { mutableStateOf<List<LauncherApp>?>(null) }
+      var appLoadRequest by remember { mutableIntStateOf(0) }
+      LaunchedEffect(installedAppsProvider, appLoadRequest) {
+        apps = withContext(Dispatchers.Default) { installedAppsProvider.installedApps() }
+      }
       DisposableEffect(installedAppsProvider) {
         val packageChangeReceiver =
             object : BroadcastReceiver() {
               override fun onReceive(context: Context, intent: Intent) {
-                apps = installedAppsProvider.installedApps()
+                appLoadRequest++
               }
             }
 
@@ -68,19 +73,22 @@ class MainActivity : ComponentActivity() {
 
         onDispose { unregisterReceiver(packageChangeReceiver) }
       }
-      val visibleApps = apps.filterNot { it.packageName in hiddenPackageNames }
-      val hiddenApps = apps.filter { it.packageName in hiddenPackageNames }
-      HomeScreen(
-          apps = visibleApps,
-          hiddenApps = hiddenApps,
-          folders = folders,
-          onAppClick = ::launchApp,
-          onAppLongClick = ::openAppInfo,
-          onHideApp = ::hideApp,
-          onRestoreApp = ::restoreApp,
-          onSaveFolder = ::saveFolder,
-          onDeleteFolder = ::deleteFolder,
-      )
+      apps?.let { installedApps ->
+        val visibleApps = installedApps.filterNot { it.packageName in hiddenPackageNames }
+        val hiddenApps = installedApps.filter { it.packageName in hiddenPackageNames }
+        HomeScreen(
+            apps = visibleApps,
+            hiddenApps = hiddenApps,
+            folders = folders,
+            onAppClick = ::launchApp,
+            onAppLongClick = ::openAppInfo,
+            onHideApp = ::hideApp,
+            onRestoreApp = ::restoreApp,
+            onRemoveApp = ::requestAppUninstall,
+            onSaveFolder = ::saveFolder,
+            onDeleteFolder = ::deleteFolder,
+        )
+      }
     }
   }
 
@@ -112,6 +120,12 @@ class MainActivity : ComponentActivity() {
 
   private fun restoreApp(app: LauncherApp) {
     updateHiddenPackages(hiddenPackageNames - app.packageName)
+  }
+
+  private fun requestAppUninstall(app: LauncherApp) {
+    startActivity(
+        Intent(Intent.ACTION_UNINSTALL_PACKAGE, Uri.fromParts("package", app.packageName, null)),
+    )
   }
 
   private fun saveFolder(folderId: String?, name: String, apps: Set<LauncherApp>) {

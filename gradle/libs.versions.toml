@@ -2,6 +2,7 @@
 # Compose
 compose = "1.11.1"
 composablesUi = "0.1.0"
+composeUnstyled = "2.7.0"
 iconsLucide = "1.0.0"
 
 # Kotlin
@@ -19,6 +20,7 @@ activityCompose = "1.13.0"
 [libraries]
 composables-icons-lucide = { group = "com.composables", name = "icons-lucide", version.ref = "iconsLucide" }
 composables-ui = { group = "com.composables", name = "ui", version.ref = "composablesUi" }
+compose-unstyled = { group = "com.composables", name = "composeunstyled", version.ref = "composeUnstyled" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 
 
