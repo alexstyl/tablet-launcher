@@ -7,9 +7,12 @@ fun main() =
       HomeScreen(
           apps = emptyList(),
           hiddenApps = emptyList(),
+          folders = emptyList(),
           onAppClick = {},
           onAppLongClick = {},
           onHideApp = {},
           onRestoreApp = {},
+          onSaveFolder = { _, _, _ -> },
+          onDeleteFolder = {},
       )
     }
