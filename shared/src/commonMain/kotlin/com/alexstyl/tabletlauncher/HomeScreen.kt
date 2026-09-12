@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +38,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
@@ -68,7 +75,29 @@ private val phonePagePadding = 16.dp
 private val phoneGridHorizontalPadding = 16.dp
 private val phoneGridHorizontalSpacing = 16.dp
 private val phoneGridVerticalSpacing = 32.dp
-private val launcherIconColor = Color(0xFF4C5BD5)
+private val launcherIconColor = Color.Black
+private val grayscaleColorMatrix = ColorMatrix().apply { setToSaturation(0f) }
+private val monochromeColorScheme =
+    lightColorScheme(
+        primary = Color.Black,
+        onPrimary = Color.White,
+        secondary = Color.Black,
+        onSecondary = Color.White,
+        background = Color.White,
+        onBackground = Color.Black,
+        surface = Color.White,
+        onSurface = Color.Black,
+        outline = Color.Black,
+    )
+
+private fun Modifier.grayscale(): Modifier = drawWithCache {
+  val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(grayscaleColorMatrix) }
+  onDrawWithContent {
+    drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
+    drawContent()
+    drawContext.canvas.restore()
+  }
+}
 
 @Composable
 fun HomeScreen(
@@ -93,8 +122,8 @@ fun HomeScreen(
       folders.associate { folder -> folder.id to apps.filter { it.key in folder.appKeys } }
 
   ComposablesTheme {
-    MaterialTheme {
-      Box(modifier = modifier.fillMaxSize()) {
+    MaterialTheme(colorScheme = monochromeColorScheme) {
+      Box(modifier = modifier.fillMaxSize().grayscale()) {
         LauncherGridPager(
             apps = topLevelApps,
             folders = folders,
@@ -693,7 +722,7 @@ private fun CreateFolderDialog(
       onDismissRequest = onDismiss,
       properties = DialogProperties(usePlatformDefaultWidth = false),
   ) {
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.fillMaxSize().grayscale()) {
       Column(modifier = Modifier.fillMaxSize().systemBarsPadding().padding(24.dp)) {
         Text(text = "Create folder", fontWeight = FontWeight.SemiBold)
         OutlinedTextField(
