@@ -44,11 +44,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -226,19 +222,7 @@ private fun LauncherGridPager(
     modifier: Modifier,
     applySystemBarPadding: Boolean = true,
 ) {
-  val wallpaperProvider = rememberWallpaperProvider()
-  val wallpaper = remember(wallpaperProvider) { wallpaperProvider.wallpaper() }
-  val labelColor = remember(wallpaper) { wallpaper.labelColor() }
-
   Box(modifier = modifier.fillMaxSize().background(Color.White)) {
-    wallpaper?.let { image ->
-      Image(
-          bitmap = image,
-          contentDescription = null,
-          modifier = Modifier.fillMaxSize(),
-          contentScale = ContentScale.Crop,
-      )
-    }
     val gridModifier =
         if (applySystemBarPadding) Modifier.fillMaxSize().systemBarsPadding()
         else Modifier.fillMaxSize()
@@ -290,7 +274,6 @@ private fun LauncherGridPager(
             gridHorizontalPadding = gridHorizontalPadding,
             gridHorizontalSpacing = gridHorizontalSpacing,
             gridVerticalSpacing = gridVerticalSpacing,
-            labelColor = labelColor,
             folderApps = folderApps,
             onAppClick = onAppClick,
             onAppLongClick = onAppLongClick,
@@ -308,29 +291,6 @@ private fun LauncherGridPager(
       }
     }
   }
-}
-
-private fun ImageBitmap?.labelColor(): Color {
-  if (this == null) {
-    return Color.Black
-  }
-
-  val samplesPerAxis = 5
-  val averageLuminance =
-      (1..samplesPerAxis).sumOf { horizontalSample ->
-        (1..samplesPerAxis).sumOf { verticalSample ->
-          toPixelMap(
-                  startX = width * horizontalSample / (samplesPerAxis + 1),
-                  startY = height * verticalSample / (samplesPerAxis + 1),
-                  width = 1,
-                  height = 1,
-              )[0, 0]
-              .luminance()
-              .toDouble()
-        }
-      } / (samplesPerAxis * samplesPerAxis)
-
-  return if (averageLuminance > 0.55) Color.Black else Color.White
 }
 
 private data class FolderDraft(
@@ -537,7 +497,6 @@ private fun LauncherGrid(
     gridHorizontalPadding: Dp,
     gridHorizontalSpacing: Dp,
     gridVerticalSpacing: Dp,
-    labelColor: Color,
     folderApps: Map<String, List<LauncherApp>>,
     onAppClick: (LauncherApp) -> Unit,
     onAppLongClick: (LauncherApp) -> Unit,
@@ -566,7 +525,6 @@ private fun LauncherGrid(
             LauncherAppTile(
                 app = item.app,
                 appIconSize = appIconSize,
-                labelColor = labelColor,
                 modifier = Modifier,
                 onClick = { onAppClick(item.app) },
                 onLongClick = { onAppLongClick(item.app) },
@@ -576,13 +534,11 @@ private fun LauncherGrid(
                 folder = item.folder,
                 apps = folderApps[item.folder.id].orEmpty(),
                 appIconSize = appIconSize,
-                labelColor = labelColor,
                 onClick = { onFolderClick(item.folder) },
             )
         LauncherGridItem.HiddenApps ->
             HiddenAppsTile(
                 appIconSize = appIconSize,
-                labelColor = labelColor,
                 modifier = Modifier,
                 onClick = onHiddenAppsClick,
             )
@@ -596,7 +552,6 @@ private fun FolderTile(
     folder: LauncherFolder,
     apps: List<LauncherApp>,
     appIconSize: Dp,
-    labelColor: Color,
     onClick: () -> Unit,
 ) {
   Column(
@@ -609,7 +564,7 @@ private fun FolderTile(
     FolderPreview(apps = apps, size = appIconSize)
     Text(
         text = folder.name,
-        color = labelColor,
+        color = Color.Black,
         fontWeight = FontWeight.Medium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -811,7 +766,6 @@ private fun CreateFolderDialog(
 private fun LauncherAppTile(
     app: LauncherApp,
     appIconSize: Dp,
-    labelColor: Color,
     modifier: Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -853,7 +807,7 @@ private fun LauncherAppTile(
     }
     Text(
         text = app.name,
-        color = labelColor,
+        color = Color.Black,
         fontWeight = FontWeight.Medium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -864,7 +818,6 @@ private fun LauncherAppTile(
 @Composable
 private fun HiddenAppsTile(
     appIconSize: Dp,
-    labelColor: Color,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
@@ -896,7 +849,7 @@ private fun HiddenAppsTile(
     }
     Text(
         text = "Hidden",
-        color = labelColor,
+        color = Color.Black,
         fontWeight = FontWeight.Medium,
         maxLines = 1,
     )
